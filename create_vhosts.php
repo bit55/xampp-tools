@@ -5,8 +5,9 @@
  * @copyright (c) 2013-2018 Eugene Dementyev <devg@ya.ru>
  * @license MIT
 */
-$serverAdminEmail = 'devg@ya.ru';
 $root = '../../www';
+$domainSuffix = '.localhost';
+$updateHostsFile = false;
 
 $apacheHostsConfig = '../apache/conf/extra/httpd-vhosts.conf';
 $systemHostsFile = 'C:\\Windows\\System32\\drivers\\etc\\hosts';
@@ -57,7 +58,7 @@ $out = <<<'EOT'
 
 #localhost
 <VirtualHost *:80>
-  ServerAdmin devg@ya.ru
+  ServerAdmin root@localhost
   DocumentRoot "/xampp72/htdocs"
   ServerName localhost
   #ErrorLog logs/localhost-error_log
@@ -106,7 +107,7 @@ echo "-------\r\n[+] Hosts found (".count($folders)."):\r\n";
 
 if (count($folders)) {
     foreach ($folders as $folder) {
-        $hostnames[] = $hostname = $folder.'.dev';
+        $hostnames[] = $hostname = $folder.$domainSuffix;
         if (is_dir($root.'/'.$folder.'/public')) {
             $folder = $folder.'/public';
         }
@@ -115,7 +116,7 @@ if (count($folders)) {
 $out .= '
 #'.$hostname.'
 <VirtualHost *:80>
-  ServerAdmin '.$serverAdminEmail.'
+  ServerAdmin root@localhost
   DocumentRoot "/www/'.$folder.'"
   ServerName '.$hostname.'
   #ErrorLog logs/'.$hostname.'-error_log
@@ -140,32 +141,33 @@ echo "-------\r\n[+] Virtual hosts setting updated.\r\n\r\n";
 
 
 // Hosts file updating.
+if ($updateHostsFile) {
+    echo "-------\r\nUpdate hosts file:\r\n";
 
-echo "-------\r\nUpdate hosts file:\r\n";
+    $lines = file($systemHostsFile);
+    $result = [];
 
-$lines = file($systemHostsFile);
-$result = [];
-
-if (count($lines)) {
-    foreach ($lines as $line) {
-        if (strpos($line, '#laragon magic!') === false && strpos($line, '#xampp-tools') === false) {
-            $result[] = $line;
+    if (count($lines)) {
+        foreach ($lines as $line) {
+            if (strpos($line, '#laragon magic!') === false && strpos($line, '#xampp-tools') === false) {
+                $result[] = $line;
+            }
         }
     }
-}
 
-if (count($hostnames)) {
-    foreach ($hostnames as $host) {
-        $result[] = '127.0.0.1    '.str_pad($host, 32)."#xampp-tools\r\n";
+    if (count($hostnames)) {
+        foreach ($hostnames as $host) {
+            $result[] = '127.0.0.1    '.str_pad($host, 32)."#xampp-tools\r\n";
+        }
     }
-}
 
-try {
-    if (file_put_contents($systemHostsFile, $result)) {
-        echo "[+] Hosts file updated.\r\n\r\n";
+    try {
+        if (file_put_contents($systemHostsFile, $result)) {
+            echo "[+] Hosts file updated.\r\n\r\n";
+        }
+    } catch (Throwable $e) {
+        echo "[!] Cant't update hosts file. Please run this script as Administrator.\r\n\r\n";
     }
-} catch (Throwable $e) {
-    echo "[!] Cant't update hosts file. Please run this script as Administrator.\r\n\r\n";
 }
 // if(file_put_contents('hosts.txt', $result)) {
     // echo "Hosts copy file updated.\r\n\r\n";
